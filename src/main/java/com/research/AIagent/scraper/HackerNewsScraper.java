@@ -17,7 +17,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
-//@Component
+@Component
 @Slf4j
 public class HackerNewsScraper extends AbstractScarper implements PlatformScraper {
 

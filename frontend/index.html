@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Research Agent — Dashboard</title>
+    <meta name="description" content="AI-powered trend detection across Reddit, Hacker News & Product Hunt" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+    <div id="app">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                </div>
+                <div>
+                    <div class="brand-title">AI Research</div>
+                    <div class="brand-subtitle">Agent Dashboard</div>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-link active" data-page="dashboard" id="nav-dashboard">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+                    Dashboard
+                </a>
+                <a href="#" class="nav-link" data-page="trends" id="nav-trends">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    Trends
+                </a>
+                <a href="#" class="nav-link" data-page="scrape-status" id="nav-scrape-status">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    Scrape Status
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="page-header">
+                <div>
+                    <h1 id="page-title">Dashboard</h1>
+                    <p class="page-subtitle" id="page-subtitle">AI-powered trend detection across Reddit, HN & Product Hunt</p>
+                </div>
+                <button class="btn-primary" id="btn-run-cycle">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    Run Research Cycle
+                </button>
+            </header>
+
+            <!-- Page: Dashboard -->
+            <section id="page-dashboard" class="page active">
+                <!-- Stats Cards -->
+                <div class="stats-grid" id="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon stat-icon-blue">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        </div>
+                        <div class="stat-value" id="stat-total-posts">0</div>
+                        <div class="stat-label">POSTS SCRAPED</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon stat-icon-pink">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                        </div>
+                        <div class="stat-value" id="stat-total-trends">0</div>
+                        <div class="stat-label">ACTIVE TRENDS</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon stat-icon-green">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        </div>
+                        <div class="stat-value" id="stat-last-analysis">—</div>
+                        <div class="stat-label">LAST ANALYSIS</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon stat-icon-purple">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+                        </div>
+                        <div class="stat-value">3</div>
+                        <div class="stat-label">PLATFORMS</div>
+                    </div>
+                </div>
+
+                <!-- Platform Cards -->
+                <div class="platform-grid">
+                    <div class="platform-card" id="platform-reddit">
+                        <div class="platform-header">
+                            <div class="platform-info">
+                                <span class="platform-dot platform-dot-reddit"></span>
+                                <span class="platform-name">Reddit</span>
+                            </div>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                        </div>
+                        <div class="platform-count" id="count-reddit">0</div>
+                        <div class="platform-label">posts scraped</div>
+                    </div>
+                    <div class="platform-card" id="platform-hackernews">
+                        <div class="platform-header">
+                            <div class="platform-info">
+                                <span class="platform-dot platform-dot-hn"></span>
+                                <span class="platform-name">Hacker News</span>
+                            </div>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                        </div>
+                        <div class="platform-count" id="count-hackernews">0</div>
+                        <div class="platform-label">posts scraped</div>
+                    </div>
+                    <div class="platform-card" id="platform-producthunt">
+                        <div class="platform-header">
+                            <div class="platform-info">
+                                <span class="platform-dot platform-dot-ph"></span>
+                                <span class="platform-name">Product Hunt</span>
+                            </div>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                        </div>
+                        <div class="platform-count" id="count-producthunt">0</div>
+                        <div class="platform-label">posts scraped</div>
+                    </div>
+                </div>
+
+                <!-- Top Trends -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2>Top Trends</h2>
+                        <a href="#" class="view-all" id="link-view-all-trends">View all →</a>
+                    </div>
+                    <div id="trends-list" class="trends-list">
+                        <div class="empty-state">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <p>No trends detected yet</p>
+                            <span>Click "Run Research Cycle" to get started</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Posts -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2>Recent Posts</h2>
+                    </div>
+                    <div id="posts-list" class="posts-list">
+                        <div class="empty-state">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            <p>No posts scraped yet</p>
+                            <span>Data will appear after the first scrape cycle</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Page: Trends -->
+            <section id="page-trends" class="page">
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2>All Trends</h2>
+                        <div class="filter-group">
+                            <button class="filter-btn active" data-filter="all">All</button>
+                            <button class="filter-btn" data-filter="AI/ML">AI/ML</button>
+                            <button class="filter-btn" data-filter="Security">Security</button>
+                            <button class="filter-btn" data-filter="DevTools">DevTools</button>
+                            <button class="filter-btn" data-filter="SaaS">SaaS</button>
+                            <button class="filter-btn" data-filter="Hardware">Hardware</button>
+                        </div>
+                    </div>
+                    <div id="all-trends-list" class="trends-list">
+                        <div class="empty-state">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                            <p>No trends available</p>
+                            <span>Run a research cycle to detect trends</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Page: Scrape Status -->
+            <section id="page-scrape-status" class="page">
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2>Scraped Posts</h2>
+                        <div class="filter-group">
+                            <button class="filter-btn active" data-platform="all">All</button>
+                            <button class="filter-btn" data-platform="REDDIT">Reddit</button>
+                            <button class="filter-btn" data-platform="HACKERNEWS">Hacker News</button>
+                            <button class="filter-btn" data-platform="PRODUCTHUNT">Product Hunt</button>
+                        </div>
+                    </div>
+                    <div id="scraped-posts-list" class="posts-list">
+                        <div class="empty-state">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            <p>No posts yet</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script type="module" src="/main.js"></script>
+</body>
+</html>

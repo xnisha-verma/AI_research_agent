@@ -1,121 +1,3 @@
-//package com.research.AIagent.scraper;
-//
-//import com.research.AIagent.config.ProxyConfig;
-//import com.research.AIagent.model.Platform;
-//import com.research.AIagent.model.ScrapedPost;
-//import com.research.AIagent.reposistory.ScrapedPostRepository;
-//import lombok.extern.slf4j.Slf4j;
-//import org.springframework.beans.factory.annotation.Value;
-//import org.springframework.stereotype.Component;
-//import tools.jackson.databind.JsonNode;
-//import tools.jackson.databind.ObjectMapper;
-//
-//import java.io.IOException;
-//import java.time.Instant;
-//import java.time.LocalDateTime;
-//import java.time.ZoneId;
-//import java.util.ArrayList;
-//import java.util.List;
-//
-//@Component
-//@Slf4j
-//public class RedditScraper extends AbstractScarper implements PlatformScraper {
-//    private final ScrapedPostRepository postRepository;
-//    private final ObjectMapper objectMapper;
-//    public RedditScraper(final ProxyConfig proxyConfig,
-//        final ScrapedPostRepository postRepository,
-//                final ObjectMapper objectMapper){
-//
-//        super(proxyConfig);
-//        this.objectMapper=objectMapper;
-//        this.postRepository=postRepository;
-//    }
-//
-//    @Value("${scraping.reddit.subreddits}")
-//    private List<String> subreddits;
-//
-//    @Value("${scraping.reddit.posts-per-subreddit}")
-//    private int postsPerSubreddit;
-//    @Override
-//    public Platform getPlatform() {
-//        return Platform.REDDIT;
-//    }
-//
-//    public List<ScrapedPost> scrape(){
-//        final List<ScrapedPost> posts = new ArrayList<>();
-//        log.info("Reddit scraper started");
-//        log.info("Reddit scraper using subreddits: {}", this.subreddits);
-////        final String proxyIp = detectProxyIp();
-//
-//        for(final String subreddit: this.subreddits){
-//            try{
-//                final String url =
-//                        "https://www.reddit.com/r/"
-//                                + subreddit
-//                                + "/hot.rss";
-//                final String json = fetch(url);
-//                final String proxyIp =  detectProxyIp();
-//                final JsonNode root = this.objectMapper.readTree(json);
-//                final JsonNode children = root.path("data")
-//                        .path("children");
-//                for(final  JsonNode  child: children){
-//                    final JsonNode data = child.path("data");
-//
-//                    final String extrenalId = data.path("id")
-//                            .asText("");
-//                    if(extrenalId.isBlank()){
-//                        continue;
-//                    }
-//                    if(this.postRepository.existsByPlatformAndExternalId(getPlatform(), extrenalId)){
-//                        continue;
-//                    }
-//                    final String title = data.path("title")
-//                            .asText("");
-//                    if(title.isBlank()){
-//                        continue;
-//                    }
-//                    final String selftext =  data.path("selftext")
-//                            .asText("")
-//                            .trim();
-//                    final String content = selftext.isBlank()? title.substring(0, Math.min(title.length(), 500)): selftext;
-//
-//                    final long postedAtEpoch = (long)data.path("created_utc").asDouble();
-//                    final LocalDateTime postedAt = data.has("created_utc")
-//                            ? LocalDateTime.ofInstant(Instant.ofEpochSecond(postedAtEpoch),
-//                            ZoneId.systemDefault()): null;
-//
-//                    final String redditurl = data.path("url").asText(null);
-//                    final String author=  data.path("author").asText(null);
-//                    final int score = data.path("score").asInt(0);
-//                    final int commentCount =  data.path("num_comments").asInt(0);
-//                    final String subredditName = data.path("subreddit").asText(subreddit);
-//                    final ScrapedPost post = ScrapedPost.builder()
-//                            .platform(getPlatform())
-//                            .externalId(extrenalId)
-//                            .title(title)
-//                            .content(content)
-//                            .proxyIpUsed(proxyIp)
-//                            .url(redditurl)
-//                            .author(author)
-//                            .score(score)
-//                            .commentCount(commentCount)
-//                            .subReddit(subredditName)
-//                            .postedAt(postedAt)
-//                            .build();
-//                    posts.add(post);
-//                }
-//                log.info("Reddit r/{} scraped: {} new posts", subreddit, posts.size());
-//                Thread.sleep(500);
-//            }catch (final InterruptedException e){
-//                Thread.currentThread().interrupt();
-//            }
-//            catch ( final IOException e) {
-//                log.error("Failed to scrape Reddit r/{}", subreddit, e.getMessage());
-//            }
-//        }
-//        return posts;
-//    }
-//}
 package com.research.AIagent.scraper;
 
 import com.research.AIagent.config.ProxyConfig;
@@ -170,7 +52,7 @@ public class RedditScraper extends AbstractScarper implements PlatformScraper {
     @Override
     public List<ScrapedPost> scrape() {
 
-        final List<ScrapedPost> posts = new ArrayList<>();
+        final List<ScrapedPost> allPosts = new ArrayList<>();
 
         log.info("Reddit scraper started");
         log.info(
@@ -185,63 +67,72 @@ public class RedditScraper extends AbstractScarper implements PlatformScraper {
 
             try {
 
+                /*
+                 * Use /.rss (Atom feed) — this is the only
+                 * unauthenticated Reddit endpoint that works
+                 * reliably. The .json API returns 403.
+                 */
                 final String url =
-                        "https://old.reddit.com/r/"
+                        "https://www.reddit.com/r/"
                                 + subreddit
-                                + "/hot.rss";
+                                + "/.rss";
 
                 log.info(
-                        "Fetching Reddit RSS for r/{}",
+                        "Fetching Reddit Atom feed for r/{}",
                         subreddit
                 );
 
                 final String xml = fetch(
                         url,
-                        "text/xml, application/rss+xml, application/xml"
+                        "application/atom+xml, text/xml"
                 );
 
                 final Document document = parseXml(xml);
 
-                final NodeList items =
-                        document.getElementsByTagName("item");
+                /*
+                 * Reddit RSS returns Atom format:
+                 * <feed> → <entry> (not <item>)
+                 */
+                final NodeList entries =
+                        document.getElementsByTagName("entry");
 
                 int scrapedForSubreddit = 0;
 
                 for (int i = 0;
-                     i < items.getLength();
+                     i < entries.getLength();
                      i++) {
 
                     if (scrapedForSubreddit >= postsPerSubreddit) {
                         break;
                     }
 
-                    final Element item =
-                            (Element) items.item(i);
+                    final Element entry =
+                            (Element) entries.item(i);
 
                     // -----------------------------
                     // Title
                     // -----------------------------
 
                     final String title =
-                            getElementText(item, "title");
+                            getElementText(entry, "title");
 
                     if (title == null || title.isBlank()) {
                         continue;
                     }
 
                     // -----------------------------
-                    // Link
+                    // Link (from <link href="..."/>)
                     // -----------------------------
 
                     final String redditUrl =
-                            getElementText(item, "link");
+                            getLinkHref(entry);
 
                     // -----------------------------
-                    // GUID / External ID
+                    // ID (e.g. "t3_1vxxb3n")
                     // -----------------------------
 
                     String externalId =
-                            getElementText(item, "guid");
+                            getElementText(entry, "id");
 
                     if (externalId == null ||
                             externalId.isBlank()) {
@@ -255,21 +146,10 @@ public class RedditScraper extends AbstractScarper implements PlatformScraper {
                         continue;
                     }
 
-                    /*
-                     * Reddit RSS guid can sometimes contain
-                     * a complete Reddit URL.
-                     *
-                     * We only need a stable unique value.
-                     */
-                    if (externalId.contains("/comments/")) {
-
-                        final String[] parts =
-                                externalId.split("/");
-
-                        if (parts.length > 0) {
-                            externalId =
-                                    parts[parts.length - 1];
-                        }
+                    // Strip "t3_" prefix if present
+                    if (externalId.startsWith("t3_")) {
+                        externalId =
+                                externalId.substring(3);
                     }
 
                     // -----------------------------
@@ -285,13 +165,13 @@ public class RedditScraper extends AbstractScarper implements PlatformScraper {
                     }
 
                     // -----------------------------
-                    // Description / Content
+                    // Content
                     // -----------------------------
 
                     String content =
                             getElementText(
-                                    item,
-                                    "description"
+                                    entry,
+                                    "content"
                             );
 
                     if (content == null ||
@@ -300,10 +180,7 @@ public class RedditScraper extends AbstractScarper implements PlatformScraper {
                         content = title;
                     }
 
-                    /*
-                     * RSS description may contain HTML.
-                     * Remove basic HTML tags.
-                     */
+                    // Strip HTML from content
                     content = removeHtml(content).trim();
 
                     if (content.length() > 5000) {
@@ -312,41 +189,36 @@ public class RedditScraper extends AbstractScarper implements PlatformScraper {
                     }
 
                     // -----------------------------
-                    // Author
+                    // Author (Atom: <author><name>)
                     // -----------------------------
 
-                    String author =
-                            getElementText(
-                                    item,
-                                    "dc:creator"
-                            );
+                    String author = getNestedText(
+                            entry, "author", "name"
+                    );
 
-                    if (author == null ||
-                            author.isBlank()) {
+                    // Strip "/u/" prefix if present
+                    if (author != null &&
+                            author.startsWith("/u/")) {
 
-                        author =
-                                getElementText(
-                                        item,
-                                        "author"
-                                );
+                        author = author.substring(3);
                     }
 
                     // -----------------------------
-                    // Published date
+                    // Published date (Atom: <updated>)
                     // -----------------------------
 
-                    final String publishedDate =
+                    final String updatedDate =
                             getElementText(
-                                    item,
-                                    "pubDate"
+                                    entry,
+                                    "updated"
                             );
 
                     final LocalDateTime postedAt =
-                            parseDate(publishedDate);
+                            parseDate(updatedDate);
 
                     // -----------------------------
-                    // Reddit RSS doesn't reliably
-                    // provide score/comments.
+                    // Atom feed doesn't provide
+                    // score / comment counts
                     // -----------------------------
 
                     final int score = 0;
@@ -371,8 +243,7 @@ public class RedditScraper extends AbstractScarper implements PlatformScraper {
                                     .postedAt(postedAt)
                                     .build();
 
-                    posts.add(post);
-
+                    allPosts.add(post);
                     scrapedForSubreddit++;
 
                     log.debug(
@@ -387,6 +258,8 @@ public class RedditScraper extends AbstractScarper implements PlatformScraper {
                         scrapedForSubreddit
                 );
 
+                // Delay between subreddits to respect
+                // Reddit rate limits
                 Thread.sleep(10_000);
 
             } catch (final InterruptedException e) {
@@ -413,10 +286,10 @@ public class RedditScraper extends AbstractScarper implements PlatformScraper {
 
         log.info(
                 "Reddit scraper finished. Total new posts: {}",
-                posts.size()
+                allPosts.size()
         );
 
-        return posts;
+        return allPosts;
     }
 
     // ============================================================
@@ -431,12 +304,8 @@ public class RedditScraper extends AbstractScarper implements PlatformScraper {
                 DocumentBuilderFactory.newInstance();
 
         /*
-         * Disable external entity processing.
-         * This makes the XML parser safer.
-         * Note: We do NOT disallow-doctype-decl because
-         * Reddit RSS may include a DOCTYPE declaration.
+         * Disable external entity processing for safety.
          */
-
         factory.setFeature(
                 "http://xml.org/sax/features/external-general-entities",
                 false
@@ -450,6 +319,9 @@ public class RedditScraper extends AbstractScarper implements PlatformScraper {
         factory.setXIncludeAware(false);
         factory.setExpandEntityReferences(false);
 
+        // Enable namespace awareness for Atom parsing
+        factory.setNamespaceAware(true);
+
         final DocumentBuilder builder =
                 factory.newDocumentBuilder();
 
@@ -461,7 +333,7 @@ public class RedditScraper extends AbstractScarper implements PlatformScraper {
     }
 
     // ============================================================
-    // GET XML ELEMENT TEXT
+    // GET ELEMENT TEXT BY TAG NAME
     // ============================================================
 
     private String getElementText(
@@ -469,8 +341,16 @@ public class RedditScraper extends AbstractScarper implements PlatformScraper {
             final String tagName
     ) {
 
+        // Try namespace-unaware first
         NodeList nodes =
                 parent.getElementsByTagName(tagName);
+
+        if (nodes.getLength() == 0) {
+            // Try with wildcard namespace
+            nodes = parent.getElementsByTagNameNS(
+                    "*", tagName
+            );
+        }
 
         if (nodes.getLength() == 0) {
             return null;
@@ -482,7 +362,77 @@ public class RedditScraper extends AbstractScarper implements PlatformScraper {
     }
 
     // ============================================================
-    // REMOVE HTML FROM RSS DESCRIPTION
+    // GET <link href="..."/> FROM ATOM ENTRY
+    // ============================================================
+
+    private String getLinkHref(final Element entry) {
+
+        final NodeList links =
+                entry.getElementsByTagName("link");
+
+        for (int i = 0; i < links.getLength(); i++) {
+
+            final Element link =
+                    (Element) links.item(i);
+
+            final String rel =
+                    link.getAttribute("rel");
+
+            // Prefer "alternate" link
+            if ("alternate".equals(rel) ||
+                    rel == null || rel.isEmpty()) {
+
+                final String href =
+                        link.getAttribute("href");
+
+                if (href != null && !href.isBlank()) {
+                    return href;
+                }
+            }
+        }
+
+        // Fallback: any link with href
+        for (int i = 0; i < links.getLength(); i++) {
+
+            final Element link =
+                    (Element) links.item(i);
+
+            final String href =
+                    link.getAttribute("href");
+
+            if (href != null && !href.isBlank()) {
+                return href;
+            }
+        }
+
+        return null;
+    }
+
+    // ============================================================
+    // GET NESTED TEXT (e.g. <author><name>...</name></author>)
+    // ============================================================
+
+    private String getNestedText(
+            final Element parent,
+            final String outerTag,
+            final String innerTag
+    ) {
+
+        final NodeList outerNodes =
+                parent.getElementsByTagName(outerTag);
+
+        if (outerNodes.getLength() == 0) {
+            return null;
+        }
+
+        final Element outer =
+                (Element) outerNodes.item(0);
+
+        return getElementText(outer, innerTag);
+    }
+
+    // ============================================================
+    // REMOVE HTML FROM CONTENT
     // ============================================================
 
     private String removeHtml(
@@ -501,7 +451,7 @@ public class RedditScraper extends AbstractScarper implements PlatformScraper {
     }
 
     // ============================================================
-    // PARSE REDDIT PUB DATE
+    // PARSE ATOM DATE (ISO 8601)
     // ============================================================
 
     private LocalDateTime parseDate(
@@ -517,7 +467,7 @@ public class RedditScraper extends AbstractScarper implements PlatformScraper {
             final ZonedDateTime zonedDateTime =
                     ZonedDateTime.parse(
                             date,
-                            DateTimeFormatter.RFC_1123_DATE_TIME
+                            DateTimeFormatter.ISO_DATE_TIME
                     );
 
             return zonedDateTime
