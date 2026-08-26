@@ -807,3 +807,11 @@ a:hover {
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
 }
+
+.platform-time {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    font-style: italic;
+    opacity: 0.85;
+}

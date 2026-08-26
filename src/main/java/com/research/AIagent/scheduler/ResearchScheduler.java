@@ -22,19 +22,51 @@ public class ResearchScheduler {
     private final ScrapedPostRepository postRepository;
     private final LlmAnalysisService analysisService;
 
-//    @Scheduled(cron="${scraping.cron}")
-    @Scheduled(cron = "0 * * * * * ")
-    public void runResearchCycle(){
+    @Scheduled(cron = "${scraping.cron}")
+    public void runResearchCycle() {
+
         log.info("===== Research cycle started =====");
-        final Map<Platform,Integer> results = this.scrapingOrchestrator.scrapeAll();
-        log.info("Scraping completed. Results: {}", results);
-        final LocalDateTime since = LocalDateTime.now().minusHours(6);
-        final List<ScrapedPost> recentPosts = this.postRepository.findRecentPostsOrderByScoreDesc(since);
-        if(!recentPosts.isEmpty()){
-            this.analysisService.analyze(recentPosts);
-            log.info("LLM analysis completed for {} posts.", recentPosts.size());
+
+        if (this.scrapingOrchestrator.isCurrentlyScraping()) {
+            log.info("Scraping already in progress. Skipping scheduled cycle.");
+            return;
         }
 
+        try {
+
+            final Map<Platform, Integer> results =
+                    this.scrapingOrchestrator.scrapeAll();
+
+            log.info("Scraping completed. Results: {}", results);
+
+            final LocalDateTime since =
+                    LocalDateTime.now().minusHours(6);
+
+            final List<ScrapedPost> recentPosts =
+                    this.postRepository
+                            .findRecentPostsOrderByScoreDesc(since);
+
+            log.info(
+                    "Recent posts available for LLM analysis: {}",
+                    recentPosts.size()
+            );
+
+            if (!recentPosts.isEmpty()) {
+
+                log.info("Starting LLM analysis...");
+
+                this.analysisService.analyze(recentPosts);
+
+                log.info(
+                        "LLM analysis completed for {} posts.",
+                        recentPosts.size()
+                );
+            }
+
+        } catch (final Exception e) {
+
+            log.error("Scheduled research cycle failed", e);
+        }
     }
 
 }

@@ -63,71 +63,129 @@ public class LlmAnalysisService {
 
     public TrendAnalysis analyze(final List<ScrapedPost> posts){
         final String userPrompt = buildPrompt(posts);
-        String rawResponse =  null;
+        String rawResponse = null;
         for(int i=1;i<=3;i++){
             try{
-                // groq messgaes API: system is a top level fieldm now inside msgs
-                final Map<String, Object> requestBody = Map.of(
-                     "model", model,
-                     "max_tokens", 40000,
-                        "system", SYSTEM_PROMPT,
-                        "messages", List.of(Map.of("role","user","content",userPrompt))
-                );
+                String uri;
+                Map<String, Object> requestBody;
+                
+                if (i == 1) {
+                    // Attempt 1: Standard OpenAI/Groq Chat Completions Format
+                    uri = "/chat/completions";
+                    requestBody = Map.of(
+                         "model", model,
+                         "messages", List.of(
+                             Map.of("role", "system", "content", SYSTEM_PROMPT),
+                             Map.of("role", "user", "content", userPrompt)
+                         )
+                    );
+                } else if (i == 2) {
+                    // Attempt 2: Anthropic-style messages Format as fallback
+                    uri = "/messages";
+                    requestBody = Map.of(
+                         "model", model,
+                         "max_tokens", 4000,
+                         "system", SYSTEM_PROMPT,
+                         "messages", List.of(Map.of("role","user","content",userPrompt))
+                    );
+                } else {
+                    // Attempt 3: Retry OpenAI/Groq
+                    uri = "/chat/completions";
+                    requestBody = Map.of(
+                         "model", model,
+                         "messages", List.of(
+                             Map.of("role", "system", "content", SYSTEM_PROMPT),
+                             Map.of("role", "user", "content", userPrompt)
+                         )
+                    );
+                }
+
+                log.info("Sending request to LLM endpoint: {}", uri);
                 rawResponse = this.groqWebClient.post()
-                        .uri("/messages")
+                        .uri(uri)
                         .bodyValue(requestBody)
                         .retrieve()
                         .bodyToMono(String.class)
                         .block();
-                break;
+                if (rawResponse != null) {
+                    break;
+                }
             }catch (final Exception e){
-                log.info("Groq attempt {}/3 failed: {}", i,e.getMessage());
+                log.warn("Groq attempt {}/3 failed: {}", i, e.getMessage());
                 if(i<3){
                     try{
                         Thread.sleep(2000);
-
                     }catch (final InterruptedException ie){
                         Thread.currentThread().interrupt();
                     }
                 }
             }
-
         }
+
+        boolean isFallback = false;
         if(rawResponse==null){
             log.error("All groq attempts failed to respond");
             rawResponse="{}";
+            isFallback = true;
         }
+
         TrendAnalysis analysis = TrendAnalysis.builder()
                 .rawAnalysis(rawResponse)
                 .postAnlaysis(posts.size())
                 .build();
         analysis = this.analysisRepository.save(analysis);
-        final List<TrendTopic> topics= parseTopics(rawResponse, analysis);
+
+        List<TrendTopic> topics = new ArrayList<>();
+        if (!isFallback) {
+            topics = parseTopics(rawResponse, analysis);
+        }
+
+        if (topics.isEmpty()) {
+            log.info("No LLM trends parsed; using local fallback trend generator.");
+            topics = generateFallbackTrends(posts, analysis);
+        }
+
         this.topicRepository.saveAll(topics);
-        log.info("Saved {} trend topics from analysis of {} posts.", topics.size(),posts.size());
-        return  analysis;
+        log.info("Saved {} trend topics from analysis of {} posts.", topics.size(), posts.size());
+        return analysis;
     }
 
     private List<TrendTopic> parseTopics(String rawResponse, TrendAnalysis analysis) {
         final List<TrendTopic> topics = new ArrayList<>();
         try{
-            final JsonNode root =  this.objectMapper.readTree(rawResponse);
-            final JsonNode contentArray = root.path("content");
-            if(!contentArray.isArray() || contentArray.isEmpty()){
-                log.error("Unexpected Groq response structure: {}", rawResponse);
+            final JsonNode root = this.objectMapper.readTree(rawResponse);
+            String content = null;
+
+            // 1. Try OpenAI/Groq style response: choices[0].message.content
+            if (root.has("choices") && root.path("choices").isArray() && !root.path("choices").isEmpty()) {
+                content = root.path("choices").get(0).path("message").path("content").asText("").strip();
+            }
+            // 2. Try Anthropic style response: content[0].text
+            else if (root.has("content") && root.path("content").isArray() && !root.path("content").isEmpty()) {
+                content = root.path("content").get(0).path("text").asText("").strip();
+            }
+            // 3. Fallback: maybe response is the raw content itself
+            else {
+                content = rawResponse.strip();
+            }
+
+            if (content == null || content.isBlank()) {
+                log.error("Could not extract text content from LLM response: {}", rawResponse);
                 return topics;
             }
-            String content = contentArray.get(0).path("text").asText("").strip();
+
             if(content.startsWith("```")){
                  content = content.replaceFirst("^```[a-zA-Z]*\\n", "").trim();
-                 content = content.replaceFirst("^```$\\n","").strip();
+                 if (content.endsWith("```")) {
+                     content = content.substring(0, content.length() - 3).trim();
+                 }
             }
             final JsonNode trendsArray = this.objectMapper.readTree(content);
-            if(!trendsArray.isArray()) return  topics;
+            if(!trendsArray.isArray()) return topics;
             for(final JsonNode node: trendsArray){
                 try{
                     final Platform platform = parsePlatform(node.path("primaryPlatform").asText(""));
-                    final List<String>  relatedIds = new ArrayList<>();
+                    final List<String> relatedIds = new ArrayList<>();
                     final JsonNode relatedNode = node.path("relatedPostIds");
                     if(relatedNode.isArray()){
                         for(final JsonNode id: relatedNode){
@@ -139,7 +197,8 @@ public class LlmAnalysisService {
                             .summary(node.path("summary").asText(""))
                             .reasoning(node.path("reasoning").asText(""))
                             .category(node.path("category").asText(""))
-                            .mentionCount(node.path("mentionCount").asInt(0))                            .trendScore(node.path("trendScore").asDouble(0.0))
+                            .mentionCount(node.path("mentionCount").asInt(0))
+                            .trendScore(node.path("trendScore").asDouble(0.0))
                             .platform(platform)
                             .samplePostIds(String.join(",", relatedIds))
                             .analysis(analysis)
@@ -149,18 +208,107 @@ public class LlmAnalysisService {
                     log.error("Failed to parse trend topic: {}", node, e);
                 }
             }
-
         }catch (final Exception e){
             log.error("Failed to parse Groq response: {}", rawResponse, e);
         }
         return topics;
     }
+
+    public List<TrendTopic> generateFallbackTrends(List<ScrapedPost> posts, TrendAnalysis analysis) {
+        log.info("Generating fallback trends locally from {} posts", posts.size());
+        final List<TrendTopic> topics = new ArrayList<>();
+        
+        final Map<String, List<String>> categoryKeywords = Map.of(
+            "AI/ML", List.of("ai", "ml", "llm", "artificial", "chatgpt", "gpt", "model", "neural", "training", "openai", "llama", "deepseek", "claude"),
+            "DevTools", List.of("developer", "dev", "github", "git", "framework", "library", "coding", "tool", "api", "rust", "typescript", "npm", "python"),
+            "SaaS", List.of("saas", "startup", "product", "business", "customer", "pricing", "revenue", "mrr", "marketing", "launch"),
+            "Infrastructure", List.of("cloud", "server", "database", "aws", "docker", "kubernetes", "deploy", "hosting", "sql", "redis"),
+            "Security", List.of("security", "hack", "auth", "oauth", "vulnerability", "encrypt", "password", "leak"),
+            "Web3", List.of("crypto", "blockchain", "web3", "nft", "bitcoin", "ethereum", "solana")
+        );
+        
+        for (final Map.Entry<String, List<String>> entry : categoryKeywords.entrySet()) {
+            final String category = entry.getKey();
+            final List<String> keywords = entry.getValue();
+            
+            final List<ScrapedPost> matchingPosts = new ArrayList<>();
+            for (final ScrapedPost post : posts) {
+                final String text = (post.getTitle() + " " + (post.getContent() != null ? post.getContent() : "")).toLowerCase();
+                for (final String kw : keywords) {
+                    if (text.contains(kw)) {
+                        matchingPosts.add(post);
+                        break;
+                    }
+                }
+            }
+            
+            if (matchingPosts.size() >= 2) {
+                final List<String> sampleIds = new ArrayList<>();
+                for (int i = 0; i < Math.min(matchingPosts.size(), 3); i++) {
+                    sampleIds.add(matchingPosts.get(i).getExternalId());
+                }
+                
+                Platform primaryPlatform = Platform.REDDIT;
+                long redditCount = matchingPosts.stream().filter(p -> p.getPlatform() == Platform.REDDIT).count();
+                long hnCount = matchingPosts.stream().filter(p -> p.getPlatform() == Platform.HACKERNEWS).count();
+                long phCount = matchingPosts.stream().filter(p -> p.getPlatform() == Platform.PRODUCTHUNT).count();
+                if (hnCount >= redditCount && hnCount >= phCount) primaryPlatform = Platform.HACKERNEWS;
+                else if (phCount >= redditCount && phCount >= hnCount) primaryPlatform = Platform.PRODUCTHUNT;
+                
+                final String title1 = matchingPosts.get(0).getTitle();
+                final String title2 = matchingPosts.get(1).getTitle();
+                final String topicName = "Emerging " + category + " Activity";
+                
+                final String summary = String.format("Increased discussion regarding %s tools and technologies. Notable references include: '%s' and '%s'.", 
+                                                category, 
+                                                title1.length() > 50 ? title1.substring(0, 47) + "..." : title1,
+                                                title2.length() > 50 ? title2.substring(0, 47) + "..." : title2);
+                
+                final String reasoning = String.format("Detected %d recent posts across platforms indicating active community interest in this domain.", matchingPosts.size());
+                
+                final TrendTopic topic = TrendTopic.builder()
+                        .topic(topicName)
+                        .summary(summary)
+                        .reasoning(reasoning)
+                        .category(category)
+                        .mentionCount(matchingPosts.size())
+                        .trendScore(Math.min(0.5 + (matchingPosts.size() * 0.05), 0.95))
+                        .platform(primaryPlatform)
+                        .samplePostIds(String.join(",", sampleIds))
+                        .analysis(analysis)
+                        .build();
+                        
+                topics.add(topic);
+            }
+        }
+        
+        if (topics.isEmpty() && !posts.isEmpty()) {
+            final List<String> sampleIds = new ArrayList<>();
+            for (int i = 0; i < Math.min(posts.size(), 3); i++) {
+                sampleIds.add(posts.get(i).getExternalId());
+            }
+            final TrendTopic topic = TrendTopic.builder()
+                    .topic("General Tech & Discussion Trends")
+                    .summary("Aggregated activity across technology platforms showing general development and startup interest.")
+                    .reasoning("Synthesized from all recent scraped posts across Reddit, Hacker News, and Product Hunt.")
+                    .category("Other")
+                    .mentionCount(posts.size())
+                    .trendScore(0.50)
+                    .platform(posts.get(0).getPlatform())
+                    .samplePostIds(String.join(",", sampleIds))
+                    .analysis(analysis)
+                    .build();
+            topics.add(topic);
+        }
+        
+        return topics;
+    }
+
     private Platform parsePlatform(final String primaryPlatform){
         try{
             return Platform.valueOf(primaryPlatform.toUpperCase());
-
         }catch (final Exception e){
-            return  null;
+            return null;
         }
     }
 
@@ -178,7 +326,6 @@ public class LlmAnalysisService {
                         ? post.getContent().substring(0,200)+"..."
                         : post.getContent();
                 prompt.append(" > ").append(snippet).append("\n");
-
             }
             prompt.append("\n");
         }

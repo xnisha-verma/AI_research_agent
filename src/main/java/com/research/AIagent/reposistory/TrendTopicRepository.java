@@ -22,4 +22,8 @@ public interface TrendTopicRepository extends JpaRepository<TrendTopic, Long> {
     List<TrendTopic> findByPlatformOrderByTrendScoreDesc(
             Platform platform
     );
+
+    List<TrendTopic> findByAnalysisIdOrderByTrendScoreDesc(
+            long analysisId
+    );
 }

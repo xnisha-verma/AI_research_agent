@@ -3,7 +3,7 @@
    Connects to Spring Boot backend at localhost:8080
    ============================================================ */
 
-const API_BASE = 'http://localhost:8080/api';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8080/api';
 
 // ---- State ----
 let currentPage = 'dashboard';
@@ -34,6 +34,34 @@ function initNavigation() {
         e.preventDefault();
         navigateTo('trends');
     });
+
+    // Platform card click handlers
+    document.getElementById('platform-reddit').addEventListener('click', () => {
+        navigateToPlatformScrape('REDDIT');
+    });
+    document.getElementById('platform-hackernews').addEventListener('click', () => {
+        navigateToPlatformScrape('HACKERNEWS');
+    });
+    document.getElementById('platform-producthunt').addEventListener('click', () => {
+        navigateToPlatformScrape('PRODUCTHUNT');
+    });
+}
+
+function navigateToPlatformScrape(platform) {
+    // Navigate to scrape status page
+    navigateTo('scrape-status');
+    
+    // Set the filter button active
+    document.querySelectorAll('[data-platform]').forEach(b => {
+        if (b.dataset.platform === platform) {
+            b.classList.add('active');
+        } else {
+            b.classList.remove('active');
+        }
+    });
+    
+    // Load posts for that platform
+    loadScrapedPosts(platform);
 }
 
 function navigateTo(page) {
@@ -79,6 +107,11 @@ function initRunButton() {
 
         try {
             const res = await fetch(`${API_BASE}/scrape/run`, { method: 'POST' });
+            if (res.status === 409) {
+                const data = await res.json();
+                showToast(data.error || 'A scrape cycle is already in progress.', 'warning');
+                return;
+            }
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             showToast(`Cycle complete! ${data.postAnyalzed || 0} posts analyzed.`, 'success');
@@ -126,6 +159,32 @@ async function loadStats() {
         if (stats.LastAnalysis) {
             document.getElementById('stat-last-analysis').textContent =
                 formatTimeAgo(stats.LastAnalysis);
+        }
+
+        try {
+            const postsRes = await fetch(`${API_BASE}/scrape/posts`);
+            if (postsRes.ok) {
+                const posts = await postsRes.json();
+                const platforms = ['REDDIT', 'HACKERNEWS', 'PRODUCTHUNT'];
+                const targetIds = {
+                    'REDDIT': 'time-reddit',
+                    'HACKERNEWS': 'time-hackernews',
+                    'PRODUCTHUNT': 'time-producthunt'
+                };
+                platforms.forEach(p => {
+                    const firstPost = posts.find(post => post.platform === p);
+                    const el = document.getElementById(targetIds[p]);
+                    if (el) {
+                        if (firstPost && firstPost.scrapedAt) {
+                            el.textContent = `Last scraped: ${formatTimeAgo(firstPost.scrapedAt)}`;
+                        } else {
+                            el.textContent = 'Never scraped';
+                        }
+                    }
+                });
+            }
+        } catch (e) {
+            console.error('Error fetching platform scrape times:', e);
         }
     } catch {
         // Stats will just show 0

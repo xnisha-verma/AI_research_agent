@@ -24,20 +24,29 @@ public class ScrapedController {
 
     @PostMapping("/run")
     public ResponseEntity<Map<String, Object>> triggerFullCycle() {
-        final Map<Platform, Integer> scrapedResults = this.orchestrator.scrapeAll();
-        final LocalDateTime since = LocalDateTime.now().minusHours(6);
-        final List<ScrapedPost> posts = this.postRepository.findRecentPostsOrderByScoreDesc(since);
-        TrendAnalysis analysis = null;
-        if (!posts.isEmpty()) {
-            analysis = this.analysisService.analyze(posts);
-
+        if (this.orchestrator.isCurrentlyScraping()) {
+            return ResponseEntity.status(409).body(
+                Map.of("error", "Another scrape cycle is already in progress. Please wait for it to complete.")
+            );
         }
-        return ResponseEntity.ok(
-                Map.of("scrapeResults", scrapedResults,
-                        "postAnyalzed", posts.size(),
-                        "trendAnalysis", analysis != null ? analysis.getId() : "none")
-
-        );
+        try {
+            final Map<Platform, Integer> scrapedResults = this.orchestrator.scrapeAll();
+            final LocalDateTime since = LocalDateTime.now().minusHours(6);
+            final List<ScrapedPost> posts = this.postRepository.findRecentPostsOrderByScoreDesc(since);
+            TrendAnalysis analysis = null;
+            if (!posts.isEmpty()) {
+                analysis = this.analysisService.analyze(posts);
+            }
+            return ResponseEntity.ok(
+                    Map.of("scrapeResults", scrapedResults,
+                            "postAnyalzed", posts.size(),
+                            "trendAnalysis", analysis != null ? analysis.getId() : "none")
+            );
+        } catch (final IllegalStateException e) {
+            return ResponseEntity.status(409).body(
+                Map.of("error", e.getMessage())
+            );
+        }
     }
 
         @PostMapping("/plaform/{platform}")

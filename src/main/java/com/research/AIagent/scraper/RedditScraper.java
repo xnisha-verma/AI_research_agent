@@ -260,7 +260,7 @@ public class RedditScraper extends AbstractScarper implements PlatformScraper {
 
                 // Delay between subreddits to respect
                 // Reddit rate limits
-                Thread.sleep(10_000);
+                Thread.sleep(2_000);
 
             } catch (final InterruptedException e) {
 

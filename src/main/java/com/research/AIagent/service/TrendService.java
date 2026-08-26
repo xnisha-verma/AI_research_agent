@@ -21,8 +21,10 @@ public class TrendService {
     private final TrendAnalysisRepository trendAnalysisRepository;
 
     public List<TrendTopic> getLatestTrends(){
-        final LocalDateTime since =  LocalDateTime.now().minusHours(24);
-        return this.trendTopicRepository.findByDetectedAtAfterOrderByTrendScoreDesc(since);
+        return this.trendAnalysisRepository.findTopByOrderByAnalyzedAtDesc()
+                .map(analysis -> this.trendTopicRepository.findByAnalysisIdOrderByTrendScoreDesc(analysis.getId()))
+                .filter(list -> !list.isEmpty())
+                .orElseGet(() -> this.trendTopicRepository.findTop20ByOrderByTrendScoreDesc());
     }
 
     public List<TrendTopic> getToptrends(){
@@ -43,7 +45,7 @@ public class TrendService {
                 "totalTrends", this.trendTopicRepository.count(),
                 "LastAnalysis",this.trendAnalysisRepository.findTopByOrderByAnalyzedAtDesc()
                         .map(TrendAnalysis::getAnalyzedAt)
-                        .orElse(LocalDateTime.now())
+                        .orElse(null)
                 );
     }
 }
