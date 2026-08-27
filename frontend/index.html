@@ -7,10 +7,238 @@
     <meta name="description" content="AI-powered trend detection across Reddit, Hacker News & Product Hunt" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-    <div id="app">
+
+    <!-- ========== LANDING EXPERIENCE ========== -->
+    <div id="landing" class="landing">
+
+        <!-- Fixed dot-grid background (GitHub-style) -->
+        <canvas id="grid-canvas" class="grid-canvas"></canvas>
+
+        <!-- Scroll-snap container -->
+        <div class="snap-container" id="snap-container">
+
+            <!-- Slide 1: Hero -->
+            <section class="snap-slide slide-hero" id="slide-hero">
+                <!-- Floating glow orbs -->
+                <div class="glow-orb glow-orb-1"></div>
+                <div class="glow-orb glow-orb-2"></div>
+                <div class="glow-orb glow-orb-3"></div>
+
+                <div class="hero-layout">
+                    <!-- Left: Text -->
+                    <div class="hero-content">
+                        <!-- <div class="hero-badge">
+                            <span class="hero-badge-dot"></span>
+                            Open Source Research Tool
+                        </div> -->
+                        <h1 class="hero-title">
+                            <span class="hero-line">AI-Powered</span>
+                            <span class="hero-line gradient-text">Trend Detection</span>
+                            <span class="hero-line">Across the Web</span>
+                        </h1>
+                        <p class="hero-desc">
+                            Scrape Reddit, Hacker News & Product Hunt in real-time. Detect emerging trends before they go mainstream.
+                        </p>
+                        <div class="hero-actions">
+                            <button class="hero-btn-primary" id="hero-enter-dashboard">
+                                Enter Dashboard
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                            </button>
+                            <a href="https://github.com/xnisha-verma/AI_research_agent" target="_blank" class="hero-btn-secondary">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                                View on GitHub
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Right: Terminal preview -->
+                    <div class="hero-terminal">
+                        <div class="terminal-header">
+                            <div class="terminal-dots">
+                                <span class="t-dot t-red"></span>
+                                <span class="t-dot t-yellow"></span>
+                                <span class="t-dot t-green"></span>
+                            </div>
+                            <span class="terminal-title">research-agent — scrape</span>
+                        </div>
+                        <div class="terminal-body" id="terminal-body">
+                            <div class="t-line"><span class="t-prompt">$</span> <span class="t-cmd">run research-cycle</span></div>
+                            <div class="t-line t-muted">▸ Connecting to platforms...</div>
+                            <div class="t-line"><span class="t-success">✓</span> Reddit — scraped <span class="t-highlight">45</span> posts</div>
+                            <div class="t-line"><span class="t-success">✓</span> Hacker News — scraped <span class="t-highlight">30</span> posts</div>
+                            <div class="t-line"><span class="t-success">✓</span> Product Hunt — scraped <span class="t-highlight">20</span> posts</div>
+                            <div class="t-line t-muted">▸ Running LLM analysis...</div>
+                            <div class="t-line"><span class="t-success">✓</span> Detected <span class="t-highlight">12</span> trending topics</div>
+                            <div class="t-line t-muted">▸ Pruning old data (3-day window)</div>
+                            <div class="t-line"><span class="t-success">✓</span> Cycle complete — <span class="t-highlight">95</span> posts analyzed</div>
+                            <div class="t-line t-cursor"><span class="t-prompt">$</span> <span class="t-blink">▌</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live stats strip -->
+                <div class="hero-stats">
+                    <div class="hero-stat">
+                        <span class="hero-stat-value">3</span>
+                        <span class="hero-stat-label">Platforms</span>
+                    </div>
+                    <div class="hero-stat-divider"></div>
+                    <div class="hero-stat">
+                        <span class="hero-stat-value">~95</span>
+                        <span class="hero-stat-label">Posts / Cycle</span>
+                    </div>
+                    <div class="hero-stat-divider"></div>
+                    <div class="hero-stat">
+                        <span class="hero-stat-value">LLM</span>
+                        <span class="hero-stat-label">Trend Analysis</span>
+                    </div>
+                    <div class="hero-stat-divider"></div>
+                    <div class="hero-stat">
+                        <span class="hero-stat-value">∞</span>
+                        <span class="hero-stat-label">Persistent</span>
+                    </div>
+                </div>
+
+                <div class="scroll-indicator" id="scroll-indicator">
+                    <span>Scroll to explore</span>
+                    <div class="scroll-arrow">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 2: What is scraping -->
+            <section class="snap-slide slide-explain" id="slide-explain">
+                <div class="explain-content">
+                    <div class="explain-label">How it works</div>
+                    <h2 class="explain-title">Web Scraping, Simplified</h2>
+                    <p class="explain-subtitle">Our agent collects, processes, and analyzes public data — so you don't have to.</p>
+
+                    <div class="flashcards" id="flashcards">
+                        <div class="flashcard" data-step="1">
+                            <div class="flashcard-number">01</div>
+                            <div class="flashcard-icon">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+                            </div>
+                            <h3>Scrape</h3>
+                            <p>Fetches top posts from Reddit, HN & Product Hunt RSS feeds using rate-limited HTTP requests.</p>
+                            <div class="flashcard-tag">~30 posts per platform</div>
+                        </div>
+
+                        <div class="flashcard" data-step="2">
+                            <div class="flashcard-number">02</div>
+                            <div class="flashcard-icon">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                            </div>
+                            <h3>Store</h3>
+                            <p>Saves posts to PostgreSQL with deduplication. Auto-prunes data older than 3 days to respect free-tier limits.</p>
+                            <div class="flashcard-tag">500MB Supabase</div>
+                        </div>
+
+                        <div class="flashcard" data-step="3">
+                            <div class="flashcard-number">03</div>
+                            <div class="flashcard-icon">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                            </div>
+                            <h3>Analyze</h3>
+                            <p>Sends post data to an LLM (Groq) to extract trending topics, categories, and sentiment scores.</p>
+                            <div class="flashcard-tag">Groq API / Fallback</div>
+                        </div>
+
+                        <div class="flashcard" data-step="4">
+                            <div class="flashcard-number">04</div>
+                            <div class="flashcard-icon">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                            </div>
+                            <h3>Visualize</h3>
+                            <p>Trends are ranked by score and displayed in a real-time dashboard. Historical data persists across sessions.</p>
+                            <div class="flashcard-tag">Persistent Dashboard</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 3: Tech stack -->
+            <section class="snap-slide slide-stack" id="slide-stack">
+                <div class="stack-content">
+                    <div class="explain-label">Built with</div>
+                    <h2 class="explain-title">The Stack</h2>
+
+                    <div class="stack-grid">
+                        <div class="stack-item">
+                            <div class="stack-item-header">
+                                <div class="stack-dot" style="background: var(--accent-orange);"></div>
+                                <span class="stack-lang">Java 21</span>
+                            </div>
+                            <span class="stack-desc">Spring Boot Backend</span>
+                        </div>
+                        <div class="stack-item">
+                            <div class="stack-item-header">
+                                <div class="stack-dot" style="background: var(--accent-blue);"></div>
+                                <span class="stack-lang">PostgreSQL</span>
+                            </div>
+                            <span class="stack-desc">Supabase Database</span>
+                        </div>
+                        <div class="stack-item">
+                            <div class="stack-item-header">
+                                <div class="stack-dot" style="background: #f7df1e;"></div>
+                                <span class="stack-lang">Vanilla JS</span>
+                            </div>
+                            <span class="stack-desc">Vite Frontend</span>
+                        </div>
+                        <div class="stack-item">
+                            <div class="stack-item-header">
+                                <div class="stack-dot" style="background: var(--accent-purple);"></div>
+                                <span class="stack-lang">Groq LLM</span>
+                            </div>
+                            <span class="stack-desc">Trend Analysis</span>
+                        </div>
+                        <div class="stack-item">
+                            <div class="stack-item-header">
+                                <div class="stack-dot" style="background: var(--accent-green);"></div>
+                                <span class="stack-lang">Render</span>
+                            </div>
+                            <span class="stack-desc">Docker Deployment</span>
+                        </div>
+                        <div class="stack-item">
+                            <div class="stack-item-header">
+                                <div class="stack-dot" style="background: var(--accent-pink);"></div>
+                                <span class="stack-lang">Netlify</span>
+                            </div>
+                            <span class="stack-desc">Static Frontend</span>
+                        </div>
+                    </div>
+
+                    <!-- Contribution-style grid
+                    <div class="contrib-grid" id="contrib-grid"></div> -->
+
+                    <button class="hero-btn-primary enter-dash-btn" id="enter-dashboard-bottom">
+                        Open Dashboard
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </button>
+                </div>
+            </section>
+        </div>
+
+        <!-- Slide indicators -->
+        <div class="slide-dots" id="slide-dots">
+            <button class="slide-dot active" data-slide="0"></button>
+            <button class="slide-dot" data-slide="1"></button>
+            <button class="slide-dot" data-slide="2"></button>
+        </div>
+    </div>
+
+    <!-- ========== DASHBOARD APP ========== -->
+    <div id="app" class="app-hidden">
+        <!-- Back to landing link -->
+        <button class="back-to-landing" id="back-to-landing" title="Back to home">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </button>
+
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-brand">

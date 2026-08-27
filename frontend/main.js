@@ -18,11 +18,119 @@ let allTrends = [];
 
 // ---- DOM Ready ----
 document.addEventListener('DOMContentLoaded', () => {
+    initLanding();
+});
+
+// ============================================================
+// LANDING PAGE
+// ============================================================
+
+function initLanding() {
+    drawGridCanvas();
+    initContribGrid();
+    initSnapObserver();
+    initSlideDots();
+    initFlashcardObserver();
+
+    // Enter dashboard buttons
+    document.getElementById('hero-enter-dashboard').addEventListener('click', enterDashboard);
+    document.getElementById('enter-dashboard-bottom').addEventListener('click', enterDashboard);
+}
+
+function enterDashboard() {
+    document.getElementById('landing').style.display = 'none';
+    document.getElementById('slide-dots').style.display = 'none';
+    const app = document.getElementById('app');
+    app.classList.remove('app-hidden');
+    app.style.display = 'flex';
     initNavigation();
     initRunButton();
     initFilters();
     loadDashboard();
-});
+
+    // Back button
+    document.getElementById('back-to-landing').addEventListener('click', () => {
+        app.classList.add('app-hidden');
+        app.style.display = 'none';
+        document.getElementById('landing').style.display = '';
+        document.getElementById('slide-dots').style.display = '';
+    });
+}
+
+function drawGridCanvas() {
+    const canvas = document.getElementById('grid-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const resize = () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const gap = 28;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'rgba(90, 90, 114, 0.25)';
+        for (let x = gap; x < canvas.width; x += gap) {
+            for (let y = gap; y < canvas.height; y += gap) {
+                ctx.beginPath();
+                ctx.arc(x, y, 0.8, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    };
+    resize();
+    window.addEventListener('resize', resize);
+}
+
+function initContribGrid() {
+    const grid = document.getElementById('contrib-grid');
+    if (!grid) return;
+    const levels = ['', 'l1', 'l2', 'l3', 'l4'];
+    for (let i = 0; i < 364; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'contrib-cell';
+        if (Math.random() > 0.55) {
+            const w = [1, 1, 1, 2, 2, 3, 4];
+            cell.classList.add(levels[w[Math.floor(Math.random() * w.length)]]);
+        }
+        grid.appendChild(cell);
+    }
+}
+
+function initSnapObserver() {
+    const slides = document.querySelectorAll('.snap-slide');
+    const dots = document.querySelectorAll('.slide-dot');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const idx = Array.from(slides).indexOf(entry.target);
+                dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+            }
+        });
+    }, { root: document.getElementById('snap-container'), threshold: 0.6 });
+    slides.forEach(s => observer.observe(s));
+}
+
+function initSlideDots() {
+    const container = document.getElementById('snap-container');
+    document.querySelectorAll('.slide-dot').forEach(dot => {
+        dot.addEventListener('click', () => {
+            const idx = parseInt(dot.dataset.slide);
+            const target = document.querySelectorAll('.snap-slide')[idx];
+            if (target) target.scrollIntoView({ behavior: 'smooth' });
+        });
+    });
+}
+
+function initFlashcardObserver() {
+    const cards = document.querySelectorAll('.flashcard');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const delay = parseInt(entry.target.dataset.step) * 120;
+                setTimeout(() => entry.target.classList.add('visible'), delay);
+            }
+        });
+    }, { threshold: 0.3 });
+    cards.forEach(c => observer.observe(c));
+}
 
 // ============================================================
 // NAVIGATION
