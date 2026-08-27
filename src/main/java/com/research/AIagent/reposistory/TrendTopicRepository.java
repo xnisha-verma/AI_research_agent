@@ -26,4 +26,9 @@ public interface TrendTopicRepository extends JpaRepository<TrendTopic, Long> {
     List<TrendTopic> findByAnalysisIdOrderByTrendScoreDesc(
             long analysisId
     );
+
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("DELETE FROM TrendTopic t WHERE t.detectedAt < :cutoff")
+    void deleteTopicsOlderThan(@org.springframework.data.repository.query.Param("cutoff") java.time.LocalDateTime cutoff);
 }

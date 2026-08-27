@@ -34,4 +34,9 @@ public interface ScrapedPostRepository extends JpaRepository<ScrapedPost, Long> 
     );
 
     List<ScrapedPost> findTop200ByOrderByScrapedAtDesc();
+
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM ScrapedPost p WHERE p.scrapedAt < :cutoff")
+    void deletePostsOlderThan(@Param("cutoff") LocalDateTime cutoff);
 }
