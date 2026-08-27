@@ -3,7 +3,14 @@
    Connects to Spring Boot backend at localhost:8080
    ============================================================ */
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8080/api';
+let rawApiBase = import.meta.env.VITE_API_BASE || 'http://localhost:8080/api';
+if (!rawApiBase.endsWith('/api') && !rawApiBase.endsWith('/api/')) {
+    if (rawApiBase.endsWith('/')) {
+        rawApiBase = rawApiBase.slice(0, -1);
+    }
+    rawApiBase += '/api';
+}
+const API_BASE = rawApiBase;
 
 // ---- State ----
 let currentPage = 'dashboard';
