@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -37,15 +38,15 @@ public class TrendService {
         return this.trendTopicRepository.findByPlatformOrderByTrendScoreDesc(platform);
     }
     public Map<String, Object> getDashboardStats(){
-        return Map.of(
-                "totalPosts", this.scrapedPostRepository.count(),
-                "redditPosts", this.scrapedPostRepository.countByPlatform(Platform.REDDIT),
-                "hackerNewsPosts", this.scrapedPostRepository.countByPlatform(Platform.HACKERNEWS),
-                "productHuntPosts", this.scrapedPostRepository.countByPlatform(Platform.PRODUCTHUNT),
-                "totalTrends", this.trendTopicRepository.count(),
-                "LastAnalysis",this.trendAnalysisRepository.findTopByOrderByAnalyzedAtDesc()
-                        .map(TrendAnalysis::getAnalyzedAt)
-                        .orElse(null)
-                );
+        final Map<String, Object> stats = new HashMap<>();
+        stats.put("totalPosts", this.scrapedPostRepository.count());
+        stats.put("redditPosts", this.scrapedPostRepository.countByPlatform(Platform.REDDIT));
+        stats.put("hackerNewsPosts", this.scrapedPostRepository.countByPlatform(Platform.HACKERNEWS));
+        stats.put("productHuntPosts", this.scrapedPostRepository.countByPlatform(Platform.PRODUCTHUNT));
+        stats.put("totalTrends", this.trendTopicRepository.count());
+        stats.put("LastAnalysis", this.trendAnalysisRepository.findTopByOrderByAnalyzedAtDesc()
+                .map(TrendAnalysis::getAnalyzedAt)
+                .orElse(null));
+        return stats;
     }
 }
